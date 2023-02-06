@@ -9,8 +9,8 @@ import {CustomerInterface} from '../shared/types/customer interface';
 })
 export class CustomersListComponent implements OnInit {
 
-  isEditPos: number | null = null;
-  isChanged = false;
+  isEditPos!: number | null;
+  isNotChanged!: boolean;
   private tempCustomer!: CustomerInterface;
 
   constructor(public httpService: HttpService) {
@@ -18,7 +18,7 @@ export class CustomersListComponent implements OnInit {
 
   ngOnInit() {
     this.httpService.getData();
-    this.tempCustomer = this.resetCustomer();
+    this.resetEditStatus();
   }
 
   editCustomer(i: number): void {
@@ -26,25 +26,47 @@ export class CustomersListComponent implements OnInit {
   }
 
   cancelEdit(): void {
-    this.isEditPos = null;
+    this.resetEditStatus();
   }
 
-  saveCustomer(): void {
+  saveCustomer(customer: CustomerInterface, i: number): void {
+    const mergedCustomer = this.mergeCustomerProps(customer, this.tempCustomer);
+    this.httpService.updateData(mergedCustomer, i);
+    this.resetEditStatus();
+
+    console.log(mergedCustomer);
   }
 
-  deleteCustomer(): void {
+  deleteCustomer(customer: CustomerInterface): void {
+    this.httpService.deleteDate(customer);
   }
 
   setValue(key: string, original: string, value: string): void {
-    console.log(key, original, value);
+    const valueTrim = value.trim();
+
+    if (original !== valueTrim && valueTrim !== this.tempCustomer[key as keyof CustomerInterface]) {
+      this.tempCustomer[key as keyof CustomerInterface] = valueTrim;
+      this.isNotChanged = false;
+    }
   }
 
 
-  private resetCustomer = (): CustomerInterface => ({
-    key: null,
-    name: '',
-    email: '',
-    mobile: '',
-    location: ''
-  });
+  private resetCustomer = (): CustomerInterface => ({key: null, name: '', email: '', mobile: '', location: ''});
+
+  private resetEditStatus(): void {
+    this.isEditPos = null;
+    this.isNotChanged = true;
+    this.tempCustomer = this.resetCustomer();
+  }
+
+  private mergeCustomerProps<T extends object>(original: T, temp: T): T {
+    const result: T = {...original};
+
+    Object.keys(temp).forEach((key) => {
+      if (temp[key as keyof T]) {
+        result[key as keyof T] = temp[key as keyof T];
+      }
+    });
+    return result;
+  }
 }
